@@ -55,7 +55,7 @@ local function register(attacker, trace, damage)
     net.WriteUInt(attacker.HITC_COMMAND or 0, 31) -- TODO: Same as above
  
     -- find entities in cone
-	local in_cone = ents.FindInCone(
+    local in_cone = ents.FindInCone(
         trace.StartPos,
         (trace.HitPos - trace.StartPos):GetNormalized(),
         10000,
