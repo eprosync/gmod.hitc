@@ -173,11 +173,12 @@ hook.Add("StartCommand", "HITC:Track", function(invoker, cmd)
 end)
 
 -- x86 didn't seem to have PostEntityFireBullets still...?
-if jit.arch == "x64" then
+-- commented out till homonovus does something about his CSGO weapons
+--[[if jit.arch == "x64" then
     hook.Add("PostEntityFireBullets", "HITC:Register", function(attacker, bullet)
         register(attacker, bullet.Trace, bullet.Damage)
     end)
-else
+else]]
     local running = false
     hook.Add("EntityFireBullets", "HITC:Register", function(attacker, bullet)
         if running then return end
@@ -194,4 +195,4 @@ else
         running = false
         return true
     end)
-end
+--end
