@@ -13,6 +13,8 @@ local convar_hitbox_duration = CreateClientConVar( "hitc_hitbox_duration", "5", 
 local convar_reveal = CreateClientConVar( "hitc_reveal", "0", false, true, "Enables/Disables constant hitbox results in field of view", 0, 1 )
 local convar_reveal_duration = CreateClientConVar( "hitc_reveal_duration", "0.25", false, true, "How long should we render the revealed hitbox", 0, 30 )
 
+local timescale = GetConVar("host_timescale")
+
 local registry = {}
 
 local function register(attacker, trace, damage)
@@ -223,7 +225,7 @@ hook.Add("PostDrawOpaqueRenderables", "HITC:Render", function()
     local t = SysTime()
 
     if reveal and reveal.time then
-        if reveal.time + convar_reveal_duration:GetFloat() < t then
+        if reveal.time + (convar_reveal_duration:GetFloat() / timescale:GetFloat()) < t then
             reveal = nil
         else
             local reveales = reveal.reveales
