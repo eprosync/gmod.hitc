@@ -20,7 +20,7 @@ local registry = {}
 local function register(attacker, trace, damage)
     if not attacker:IsPlayer() then return end
     if attacker:GetInfoNum( "hitc_hits", 0 ) < 1 then return end
- 
+
     -- find entities in cone
 	local in_cone = ents.FindInCone(
         trace.StartPos,
@@ -28,7 +28,7 @@ local function register(attacker, trace, damage)
         10000,
         math.cos(math.rad( 15 ))
     )
- 
+
     local to_check = {}
     for i=1, #in_cone do
         local entity = in_cone[i]
@@ -41,20 +41,30 @@ local function register(attacker, trace, damage)
             mask = MASK_SHOT
         })
         if tr.Hit then continue end
- 
+
         to_check[#to_check+1] = entity
     end
- 
+
     local entities = {}
     for i=1, #to_check do
         local entity = to_check[i]
 
+        local modelscale = entity:GetModelScale()
+
         local hitboxes = {}
         for group=0, entity:GetHitBoxGroupCount() - 1 do
             for hitbox=0, entity:GetHitBoxCount(group) - 1 do
-                local pos, ang =  entity:GetBonePosition(entity:GetHitBoxBone(hitbox, group))
-                local mins, maxs = entity:GetHitBoxBounds(hitbox, group)
+                local bone = entity:GetHitBoxBone(hitbox, group)
+                local pos, ang =  entity:GetBonePosition(bone)
                 local grouping = entity:GetHitBoxHitGroup(hitbox, 0)
+
+                local mins, maxs = entity:GetHitBoxBounds(hitbox, group)
+                local bonescale = entity:GetManipulateBoneScale(bone)
+
+                mins:Mul(modelscale)
+                mins:Mul(bonescale)
+                maxs:Mul(modelscale)
+                maxs:Mul(bonescale)
 
                 hitboxes[#hitboxes+1] = {
                     hit = trace.Entity == entity and trace.HitGroup == grouping,
@@ -76,7 +86,7 @@ local function register(attacker, trace, damage)
             hitboxes = hitboxes
         }
     end
- 
+
     registry[#registry+1] = {
         client = true,
         time = SysTime(),
@@ -298,7 +308,7 @@ hook.Add("PostDrawOpaqueRenderables", "HITC:Render", function()
                 surface.DrawRect( -1, -10, 1, 20 )
                 surface.DrawRect( -10, -1, 20, 1 )
                 local offset = 20
-                
+
                 if i == #registry then
                     surface.SetFont( "DermaDefault" )
                     local tW, tH = surface.GetTextSize( text )
@@ -308,7 +318,7 @@ hook.Add("PostDrawOpaqueRenderables", "HITC:Render", function()
                     surface.DrawRect( -tW / 2 - padX, offset - padY, tW + padX * 2, tH + padY * 2 )
                     draw.SimpleText( text, "DermaDefault", -tW / 2, offset, color_white )
                 end
-                
+
                 surface.SetAlphaMultiplier( o )
             cam.End3D2D()
         end
@@ -364,7 +374,7 @@ hook.Add("PostDrawOpaqueRenderables", "HITC:Render", function()
                         surface.DrawRect( -1, -10, 1, 20 )
                         surface.DrawRect( -10, -1, 20, 1 )
                         local offset = -20
-                        
+
                         if i == #registry-1 then
                             surface.SetFont( "DermaDefault" )
                             local tW, tH = surface.GetTextSize( text )
@@ -374,7 +384,7 @@ hook.Add("PostDrawOpaqueRenderables", "HITC:Render", function()
                             surface.DrawRect( -tW / 2 - padX, offset - padY - tH, tW + padX * 2, tH + padY * 2 )
                             draw.SimpleText( text, "DermaDefault", -tW / 2, offset - tH, hit_client_color )
                         end
-                        
+
                         surface.SetAlphaMultiplier( o )
                     cam.End3D2D()
                 end

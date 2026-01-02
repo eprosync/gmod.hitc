@@ -13,13 +13,23 @@ local function hitbox_network(target)
     net.WriteVector(target:GetPos())
     net.WriteVector(target:OBBMins())
     net.WriteVector(target:OBBMaxs())
-    
+
+    local modelscale = target:GetModelScale()
+
     local hitboxes = {}
     for group=0, target:GetHitBoxGroupCount() - 1 do
         for hitbox=0, target:GetHitBoxCount(group) - 1 do
-            local pos, ang =  target:GetBonePosition(target:GetHitBoxBone(hitbox, group))
+            local bone = target:GetHitBoxBone(hitbox, group)
+            local pos, ang =  target:GetBonePosition(bone)
+
             local mins, maxs = target:GetHitBoxBounds(hitbox, group)
-    
+            local bonescale = target:GetManipulateBoneScale(bone)
+
+            mins:Mul(modelscale)
+            mins:Mul(bonescale)
+            maxs:Mul(modelscale)
+            maxs:Mul(bonescale)
+
             hitboxes[#hitboxes+1] = {
                 position = pos,
                 angle = ang,
@@ -28,9 +38,9 @@ local function hitbox_network(target)
             }
         end
     end
-    
+
     net.WriteUInt(#hitboxes, 8)
-    
+
     for i=1, #hitboxes do
         local hitbox = hitboxes[i]
         net.WriteVector(hitbox.position)
@@ -45,15 +55,15 @@ end
 local function register(attacker, trace, damage)
     if not attacker:IsPlayer() then return end
     if attacker:GetInfoNum( "hitc_hits", 0 ) < 1 then return end
- 
+
     net.Start("HITC:Register", not (attacker:GetInfoNum( "hitc_reliable", 0 ) < 1))
- 
+
     -- write raycast result
     net.WriteVector(trace.StartPos)
     net.WriteVector(trace.HitPos)
     net.WriteUInt(damage or 0, 31) -- TODO: Review source sdk if this can be reduced
     net.WriteUInt(attacker.HITC_COMMAND or 0, 31) -- TODO: Same as above
- 
+
     -- find entities in cone
     local in_cone = ents.FindInCone(
         trace.StartPos,
@@ -61,7 +71,7 @@ local function register(attacker, trace, damage)
         10000,
         math.cos(math.rad( 15 ))
     )
- 
+
     local entities = {}
     for i=1, #in_cone do
         local entity = in_cone[i]
@@ -74,12 +84,12 @@ local function register(attacker, trace, damage)
             mask = MASK_SHOT
         })
         if tr.Hit then continue end
- 
+
         entities[#entities+1] = entity
     end
- 
+
     net.WriteUInt(#entities, 8)
- 
+
     for i=1, #entities do
         local entity = entities[i]
         net.WriteUInt(entity:EntIndex(), 13)
@@ -87,13 +97,23 @@ local function register(attacker, trace, damage)
         net.WriteVector(entity:GetPos())
         net.WriteVector(entity:OBBMins())
         net.WriteVector(entity:OBBMaxs())
-        
+
+        local modelscale = entity:GetModelScale()
+
         local hitboxes = {}
         for group=0, entity:GetHitBoxGroupCount() - 1 do
             for hitbox=0, entity:GetHitBoxCount(group) - 1 do
-                local pos, ang =  entity:GetBonePosition(entity:GetHitBoxBone(hitbox, group))
+                local bone = entity:GetHitBoxBone(hitbox, group)
+                local pos, ang =  entity:GetBonePosition(bone)
+
                 local mins, maxs = entity:GetHitBoxBounds(hitbox, group)
-        
+                local bonescale = entity:GetManipulateBoneScale(bone)
+
+                mins:Mul(modelscale)
+                mins:Mul(bonescale)
+                maxs:Mul(modelscale)
+                maxs:Mul(bonescale)
+
                 hitboxes[#hitboxes+1] = {
                     hit = trace.Entity == entity and trace.HitGroup == group,
                     position = pos,
@@ -103,9 +123,9 @@ local function register(attacker, trace, damage)
                 }
             end
         end
-        
+
         net.WriteUInt(#hitboxes, 8)
-        
+
         for i=1, #hitboxes do
             local hitbox = hitboxes[i]
             net.WriteBool(hitbox.hit)
@@ -115,7 +135,7 @@ local function register(attacker, trace, damage)
             net.WriteVector(hitbox.maxs)
         end
     end
- 
+
     net.Send(attacker)
 end
 
@@ -151,7 +171,7 @@ hook.Add("Tick", "HITC:Hitbox", function()
                     closest_dist = dist
                 end
             end
-    
+
             if closest then
                 net.Start("HITC:Reveal", not (player:GetInfoNum( "hitc_reliable", 0 ) < 1))
                 hitbox_network(closest)
